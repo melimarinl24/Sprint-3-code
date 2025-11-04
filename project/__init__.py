@@ -61,4 +61,7 @@ def create_app():
     from .faculty_ui import faculty_ui
     app.register_blueprint(faculty_ui)
 
+    from .student_exam_routes import student_exam_bp
+    app.register_blueprint(student_exam_bp)
+
     return app

@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block content %}
+<main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
+  <h1>Your Scheduled Exams</h1>
+
+  {% if exams %}
+    <table border="1" cellpadding="6" cellspacing="0" width="100%">
+      <tr>
+        <th>Exam</th>
+        <th>Date</th>
+        <th>Location</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+      {% for exam in exams %}
+        <tr>
+          <td>{{ exam.exam_name }}</td>
+          <td>{{ exam.exam_date }}</td>
+          <td>{{ exam.exam_location }}</td>
+          <td>{{ exam.status }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('student_exam_bp.cancel_exam', exam_id=exam.exam_id) }}" style="display:inline;">
+              <button type="submit">Cancel</button>
+            </form>
+
+            <form method="POST" action="{{ url_for('student_exam_bp.reschedule_exam', exam_id=exam.exam_id) }}" style="display:inline;">
+              <input type="date" name="new_date" required>
+              <input type="time" name="new_time" required>
+              <button type="submit">Reschedule</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>No scheduled exams yet.</p>
+  {% endif %}
+</main>
+{% endblock %}

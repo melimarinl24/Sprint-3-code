@@ -1,7 +1,42 @@
 {% extends "layout.html" %}
+
 {% block content %}
 <main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
-  <h1>Student Dashboard</h1>
-  <p>Student dashboard under construction.</p>
+  <h1>
+    Welcome,
+    {% if current_user.is_authenticated and current_user.first_name %}
+      {{ current_user.first_name }}
+    {% else %}
+      Student
+    {% endif %}
+  </h1>
+
+  <p>What would you like to do?</p>
+
+  <nav>
+    <ul style="list-style:none; padding:0;">
+      <li style="margin-bottom:10px;">
+        <a href="{{ url_for('student_exam_bp.student_exams') }}" class="btn btn-primary-blue">
+          Make an Appointment
+        </a>
+      </li>
+      <li style="margin-bottom:10px;">
+        <a href="{{ url_for('student_exam_bp.student_appointments') }}" class="btn btn-primary-blue">
+          View My Appointments
+        </a>
+      </li>
+      <li>
+        <form action="{{ url_for('auth.logout') }}" method="post" style="display:inline;">
+          {{ csrf_token() if csrf_token is defined }}
+          <button type="submit" class="btn btn-primary-blue">Logout</button>
+        </form>
+      </li>
+    </ul>
+  </nav>
+
+  <p class="hint">
+    You can cancel or reschedule your appointments on the
+    <strong>“View My Appointments”</strong> page.
+  </p>
 </main>
 {% endblock %}
