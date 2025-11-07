@@ -96,3 +96,31 @@ def student_appointments():
     """)
     exams = db.session.execute(query, {"student_id": current_user.id}).fetchall()
     return render_template("appointments.html", exams=exams)
+
+# ==========================
+# REGISTRATION CONFIRMATION PAGE   
+# ========================== 
+@student_exam_routes.route("/student/exams/register", methods=["POST"])
+@login_required
+def register_exam():
+    # Example logic for creating a reservation
+    form_data = request.form
+    exam_id = form_data.get("exam_id")
+    location_id = form_data.get("location_id")
+    session_start = form_data.get("session_start")
+
+    new_reservation = Reservation(
+        confirmation_number=str(uuid.uuid4())[:8].upper(),
+        exam_id=exam_id,
+        location_id=location_id,
+        session_start=session_start,
+        student_id=current_user.id
+    )
+
+    db.session.add(new_reservation)
+    db.session.commit()
+
+    # Redirect to confirmation page
+    return redirect(
+        url_for("student_ui.registration_confirmation", reservation_id=new_reservation.id)
+    )

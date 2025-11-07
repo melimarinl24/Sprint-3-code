@@ -35,3 +35,26 @@ def student_appointments():
 @login_required
 def student_prefill_test():
     return render_template("partials/student_prefill_form.html")
+
+# ==========================================================
+# REGISTRATION CONFIRMATION PAGE
+# ==========================================================
+from flask import request, redirect, url_for
+from project.models import Reservation  # adjust to your actual model
+from project import db
+
+@student_ui.route("/student/registration/confirmation/<int:reservation_id>", methods=["GET"])
+@login_required
+def registration_confirmation(reservation_id):
+    """
+    Registration Confirmation Page
+    Displays the student's exam booking confirmation details.
+    """
+    reservation = Reservation.query.get_or_404(reservation_id)
+
+    return render_template(
+        "registration_confirmation.html",
+        reservation=reservation
+    )
+
+

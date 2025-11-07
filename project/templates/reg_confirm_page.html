@@ -1,0 +1,52 @@
+{# templates/registration_confirmation.html #}
+{% extends "base.html" %}
+
+{% block title %}Registration Confirmation{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h2 class="mb-0">Registration Confirmed</h2>
+        </div>
+
+        <div class="card-body">
+            <p class="lead">
+                Your exam booking was successful. Please review your details below.
+            </p>
+
+            <dl class="row mb-4">
+                <dt class="col-sm-4">Confirmation Number</dt>
+                <dd class="col-sm-8">
+                    {{ reservation.confirmation_number or reservation.id }}
+                </dd>
+
+                <dt class="col-sm-4">Exam Name</dt>
+                <dd class="col-sm-8">
+                    {{ reservation.exam.name if reservation.exam else "N/A" }}
+                </dd>
+
+                <dt class="col-sm-4">Session Date</dt>
+                <dd class="col-sm-8">
+                    {{ reservation.session_start.strftime("%B %d, %Y") }}
+                </dd>
+
+                <dt class="col-sm-4">Session Time</dt>
+                <dd class="col-sm-8">
+                    {{ reservation.session_start.strftime("%I:%M %p") }}
+                </dd>
+
+                <dt class="col-sm-4">Location</dt>
+                <dd class="col-sm-8">
+                    {{ reservation.location.name if reservation.location else "N/A" }}
+                </dd>
+            </dl>
+
+            <a href="{{ url_for('student_ui.my_reservations') }}"
+               class="btn btn-primary">
+                Go to My Reservations
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
