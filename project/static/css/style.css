@@ -65,6 +65,7 @@ body::before{
 /* Nav buttons */
 nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
 .nav-btn{
+  font: inherit;              /* inherit family, size, weight, etc. */
   padding:10px 18px;
   border-radius:999px;
   text-decoration:none;
@@ -73,6 +74,40 @@ nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
 }
 .nav-btn-outline{border:1px solid rgba(0,0,0,.12); color:#111; background:#fff}
 .nav-btn-outline:hover{background:#f7f7fb}
+
+/* === NAV ALIGNMENT FIX === */
+.site-header nav a.nav-btn,
+.site-header nav button.nav-btn {
+  height: 41.8px;            /* match Sign Up button height */
+  line-height: 41.8px;       /* vertical centering for links */
+  font-size: 15px;
+  padding: 0 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+/* Make logout <button> behave like a link */
+.site-header nav button.nav-btn {
+  font: inherit;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+}
+
+/* Normalize Sign Up button to same size too */
+.site-header nav a.btn-primary-purple {
+  height: 41.8px !important;
+  line-height: 41.8px !important;
+  padding: 0 20px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
 
 .btn-outline-dark{
   background:rgba(255,255,255,.08);

@@ -4,8 +4,8 @@
 <main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
   <h1>
     Welcome,
-    {% if current_user.is_authenticated and current_user.first_name %}
-      {{ current_user.first_name }}
+    {% if current_user.is_authenticated and current_user.name %}
+      {{ current_user.name.split(' ')[0] }}
     {% else %}
       Faculty
     {% endif %}
@@ -24,12 +24,6 @@
         <a href="{{ url_for('faculty_ui.faculty_search_appointments') }}" class="btn btn-primary-blue">
           Search Appointments
         </a>
-      </li>
-      <li>
-        <form action="{{ url_for('auth.logout') }}" method="post" style="display:inline">
-          {{ csrf_token() if csrf_token is defined }}
-          <button type="submit" class="btn btn-primary-blue">Logout</button>
-        </form>
       </li>
     </ul>
   </nav>

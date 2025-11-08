@@ -98,12 +98,38 @@ def signup():
         return render_template('signup.html', roles=roles, departments=departments,
                                errorMsg='This NSHE is already registered.')
 
-    # FK resolution
+        # --- FK resolution (role / major / department) ---
     role = Role.query.filter_by(name=role_lower.title()).first()
-    major = Major.query.filter_by(name=major_name).first() if role_lower == 'student' else None
-    dept = Department.query.get(department_id) if role_lower == 'faculty' else None
+    if not role:
+        return render_template('signup.html', roles=roles, departments=departments,
+                               errorMsg='Role not configured; contact admin.')
 
-    # Create user
+    dept = None
+    major = None
+
+    if role_lower == 'student':
+        # Resolve Major by name from the form; (optional) switch to ID if your form sends major_id
+        major = Major.query.filter_by(name=major_name).first()
+        if not major:
+            return render_template('signup.html', roles=roles, departments=departments,
+                                   errorMsg='Selected major not found.')
+
+        # Auto-fill department from the Major (Option A)
+        dept = Department.query.get(major.department_id)
+        if not dept:
+            return render_template('signup.html', roles=roles, departments=departments,
+                                   errorMsg='Major maps to an unknown department. Contact admin.')
+
+    else:  # faculty
+        if not department_id:
+            return render_template('signup.html', roles=roles, departments=departments,
+                                   errorMsg='Department is required for faculty.')
+        dept = Department.query.get(department_id)
+        if not dept:
+            return render_template('signup.html', roles=roles, departments=departments,
+                                   errorMsg='Selected department not found.')
+
+    # --- Build user with guaranteed department_id ---
     full_name = f'{first_name} {last_name}'.strip()
     password_hash = generate_password_hash(password_plain)
 
@@ -113,14 +139,15 @@ def signup():
         phone=phone,
         nshe_id=nshe if role_lower == 'student' else None,
         employee_id=employee_id if role_lower == 'faculty' else None,
-        role_id=getattr(role, 'id', None),
-        major_id=getattr(major, 'id', None),
-        department_id=getattr(dept, 'id', None),
+        role_id=role.id,
+        major_id=major.id if major else None,
+        department_id=dept.id,        # <-- always set now (student via Major, faculty via form)
         password_hash=password_hash
     )
 
     db.session.add(user)
     db.session.commit()
+
 
     login_user(user, remember=True)
 

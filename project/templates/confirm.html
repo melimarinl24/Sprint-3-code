@@ -1,0 +1,53 @@
+{# templates/confirm.html #}
+{% extends "layout.html" %}
+
+{% block title %}Registration Confirmation{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width:820px;">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+      <h2 class="mb-0">Registration Confirmed</h2>
+      <button onclick="window.print()" class="btn btn-light btn-sm">
+        <i class="bi bi-printer"></i> Print
+      </button>
+    </div>
+
+    <div class="card-body">
+      <p class="lead">Your exam booking was successful. Please review your details below.</p>
+
+      <dl class="row mb-4">
+        <dt class="col-sm-4">Confirmation Code</dt>
+        <dd class="col-sm-8 fw-semibold">{{ info.confirmation_code }}</dd>
+
+        <dt class="col-sm-4">Exam Name</dt>
+        <dd class="col-sm-8">{{ info.exam_title }}</dd>
+
+        <dt class="col-sm-4">Exam ID</dt>
+        <dd class="col-sm-8">{{ info.exam_id }}</dd>
+
+        <dt class="col-sm-4">Exam Date</dt>
+        <dd class="col-sm-8">
+          {# if it's a date/datetime this will format; otherwise just show value #}
+          {{ info.exam_date.strftime("%B %d, %Y") if info.exam_date and info.exam_date.strftime else info.exam_date }}
+        </dd>
+
+        <dt class="col-sm-4">Exam Time</dt>
+        <dd class="col-sm-8">{{ info.exam_time }}</dd>
+
+        <dt class="col-sm-4">Location</dt>
+        <dd class="col-sm-8">{{ info.exam_location }}</dd>
+      </dl>
+
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('student_ui.student_appointments') }}" class="btn btn-primary">Go to My Appointments</a>
+        <a href="{{ url_for('student_ui.student_exams') }}" class="btn btn-outline-secondary">Book Another Exam</a>
+      </div>
+
+      <p class="text-muted mt-3 mb-0">
+        Please keep a copy of this confirmation for your records. You may need it at check-in.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

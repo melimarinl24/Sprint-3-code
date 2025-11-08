@@ -25,12 +25,6 @@
           Search Appointments
         </a>
       </li>
-      <li>
-        <form action="{{ url_for('auth.logout') }}" method="post" style="display:inline">
-          {{ csrf_token() if csrf_token is defined }}
-          <button type="submit" class="btn btn-primary-blue">Logout</button>
-        </form>
-      </li>
     </ul>
   </nav>
 

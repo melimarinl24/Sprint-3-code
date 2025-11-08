@@ -1,45 +1,106 @@
 {% extends "layout.html" %}
-
 {% block content %}
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Schedule an Exam</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-</head>
-<body>
-<main class="container">
+
 <a href="{{ url_for('student_ui.student_dashboard') }}">← Back to dashboard</a>
 <h1>Schedule an Exam</h1>
 
+{% if exams and exams|length > 0 %}
+  <table role="grid" style="width:100%;">
+    <thead>
+      <tr>
+        <th>Course</th>
+        <th>Date</th>
+        <th>Time</th>
+        <th>Location</th>
+        <th style="text-align:center;">Availability</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for e in exams %}
+      <tr data-exam-id="{{ e.exam_id }}">
+        <td>{{ e.course }}</td>
+        <td>{{ e.date }}</td>
+        <td>{{ e.time or '—' }}</td>
+        <td>{{ e.location }}</td>
+        <td style="text-align:center;">
+          <span class="availability-badge"
+                aria-live="polite"
+                data-remaining="{{ e.remaining }}">
+            {% if e.remaining <= 0 %}
+              <span class="secondary contrast" style="padding:0.2rem 0.5rem;border-radius:0.5rem;">Full</span>
+            {% elif e.remaining <= 3 %}
+              <span class="contrast" style="padding:0.2rem 0.5rem;border-radius:0.5rem;">{{ e.remaining }} left</span>
+            {% else %}
+              <span style="padding:0.2rem 0.5rem;border-radius:0.5rem;">{{ e.remaining }} seats</span>
+            {% endif %}
+          </span>
+        </td>
+        <td>
+        <a
+          href="{{ url_for('student_ui.register_review', exam_id=e.exam_id) }}"
+          role="button"
+          {% if e.remaining <= 0 %}aria-disabled="true" class="contrast"{% endif %}
+        >
+        Register
+        </a>
 
-{% if exams %}
-<table>
-<thead>
-<tr><th>Course</th><th>Date</th><th>Time</th><th>Location</th><th></th></tr>
-</thead>
-<tbody>
-{% for e in exams %}
-<tr>
-<td>{{ e.course }}</td>
-<td>{{ e.date }}</td>
-<td>{{ e.time }}</td>
-<td>{{ e.location }}</td>
-<td>
-<!-- For now just pretend to schedule and jump to My Appointments -->
-<a href="{{ url_for('student_ui.student_appointments') }}" role="button">Schedule</a>
-</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <noscript>
+    <p style="margin-top:1rem;">Enable JavaScript to auto-refresh availability.</p>
+  </noscript>
+
+  <script>
+    function renderBadge(span, left) {
+      const pad = 'padding:0.2rem 0.5rem;border-radius:0.5rem;';
+      if (left <= 0) {
+        span.innerHTML = `<span class="secondary contrast" style="${pad}">Full</span>`;
+      } else if (left <= 3) {
+        span.innerHTML = `<span class="contrast" style="${pad}">${left} left</span>`;
+      } else {
+        span.innerHTML = `<span style="${pad}">${left} seats</span>`;
+      }
+      span.setAttribute('data-remaining', String(left));
+    }
+
+    async function refreshAvailability() {
+      try {
+        const res = await fetch("{{ url_for('student_ui.api_exam_availability') }}", {
+          headers: { "Accept": "application/json" }
+        });
+        const data = await res.json();
+        if (!data.ok) return;
+
+        for (const e of data.exams) {
+          const row  = document.querySelector(`[data-exam-id="${e.exam_id}"]`);
+          if (!row) continue;
+
+          const badgeWrap = row.querySelector('.availability-badge');
+          const btn       = row.querySelector('button[type="submit"]');
+          const left      = Number(e.remaining) || 0;
+
+          if (badgeWrap) renderBadge(badgeWrap, left);
+          if (btn) {
+            if (left <= 0) btn.setAttribute('disabled', 'disabled');
+            else           btn.removeAttribute('disabled');
+          }
+        }
+      } catch (_) {
+        /* ignore network flukes */
+      }
+    }
+    // refresh every 45s
+    setInterval(refreshAvailability, 45000);
+  </script>
+
 {% else %}
-<p>No available exams right now.</p>
+  <p>No available exams right now.</p>
 {% endif %}
-</main>
-</body>
-</html>
 
 {% endblock %}

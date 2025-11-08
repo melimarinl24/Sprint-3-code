@@ -37,8 +37,8 @@
             <li><a class="nav-btn nav-btn-outline" href="{{ url_for('student_ui.student_dashboard') }}">Dashboard</a></li>
           {% endif %}
           <li>
-            <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline;">
-              <button class="btn-outline-dark" type="submit">Log out</button>
+            <form method="POST" action="{{ url_for('auth.logout') }}">
+              <button class="nav-btn nav-btn-outline" type="submit">Log out</button>
             </form>
           </li>
         {% endif %}
@@ -82,15 +82,15 @@
 
 
       // --- DEMO SETTINGS (50s warn -> 60s logout) ---
-      const WARN_AFTER_MS   = 50 * 1000; // warn at 50 seconds
-      const LOGOUT_AFTER_MS = 60 * 1000; // logout at 1 minute
-      const GRACE_MS        = LOGOUT_AFTER_MS - WARN_AFTER_MS; // 10 second grace
+      // const WARN_AFTER_MS   = 50 * 1000; // warn at 50 seconds
+      // const LOGOUT_AFTER_MS = 60 * 1000; // logout at 1 minute
+      // const GRACE_MS        = LOGOUT_AFTER_MS - WARN_AFTER_MS; // 10 second grace
 
 
       // --- FINAL SETTINGS (28min warn -> 30min logout) ---
-      // const WARN_AFTER_MS   = 28 * 60 * 1000; // 28 minutes
-      // const LOGOUT_AFTER_MS = 30 * 60 * 1000; // 30 minutes
-      // const GRACE_MS        = LOGOUT_AFTER_MS - WARN_AFTER_MS; // 2-minute grace
+      const WARN_AFTER_MS   = 28 * 60 * 1000; // 28 minutes
+      const LOGOUT_AFTER_MS = 30 * 60 * 1000; // 30 minutes
+      const GRACE_MS        = LOGOUT_AFTER_MS - WARN_AFTER_MS; // 2-minute grace
 
       let warnTimer = null;
       let logoutTimer = null;
