@@ -74,6 +74,72 @@ nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
 .nav-btn-outline{border:1px solid rgba(0,0,0,.12); color:#111; background:#fff}
 .nav-btn-outline:hover{background:#f7f7fb}
 
+
+/* === NAV ALIGNMENT FIX === 11/8/25 */
+.site-header nav a.nav-btn,
+.site-header nav button.nav-btn {
+  height: 41.8px;
+  line-height: 41.8px;
+  font-size: 15px;
+  padding: 0 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  box-sizing: border-box;
+}
+
+/* Make logout <button> behave like a link */
+.site-header nav button.nav-btn {
+  font: inherit;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+}
+
+/* Normalize Sign Up button to same size too */
+.site-header nav a.btn-primary-purple,
+.site-header nav button.btn-primary-purple {
+    background: var(--brand-purple-500) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+    font-size: 15px !important;
+
+    /* sizing */
+    height: 41.8px !important;
+    padding: 0 20px !important;
+    line-height: 41.8px !important;
+
+    /* shape & layout */
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: middle !important;
+
+    /* glow */
+    box-shadow: 0 6px 18px rgba(109,49,255,0.22) !important;
+    border: none !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+}
+
+.site-header nav a.btn-primary-purple:hover,
+.site-header nav button.btn-primary-purple:hover {
+    background: var(--brand-purple-600) !important;
+    box-shadow: 0 6px 22px rgba(109,49,255,0.35) !important;
+    transform: translateY(-1px);
+}
+
+.site-header nav a.btn-primary-purple:active,
+.site-header nav button.btn-primary-purple:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 14px rgba(109,49,255,0.28);
+}
+
+
 .btn-outline-dark{
   background:rgba(255,255,255,.08);
   color:#000;
@@ -457,3 +523,5 @@ nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
   background-color: #f9f9f9;
   cursor: not-allowed;
 }
+
+

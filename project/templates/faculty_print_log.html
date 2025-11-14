@@ -1,42 +1,41 @@
 {% extends "layout.html" %}
-
 {% block content %}
-<main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
-  <h1>
-    Welcome,
-    {% if current_user.is_authenticated and current_user.first_name %}
-      {{ current_user.first_name }}
-    {% else %}
-      Faculty
-    {% endif %}
-  </h1>
+<main class="container" style="max-width:900px;margin:40px auto;padding:18px;">
+  <h1>Exam Log</h1>
+  <p>Below is a complete log of all scheduled exams. You can print or export this list for your records.</p>
 
-  <p>What would you like to do?</p>
+  <div style="margin-bottom:16px;">
+    <button onclick="window.print()" class="btn btn-primary-blue">Print This Page</button>
+    <a href="{{ url_for('faculty_ui.faculty_dashboard') }}" class="btn btn-outline">← Back to Dashboard</a>
+  </div>
 
-  <nav>
-    <ul style="list-style:none; padding:0;">
-      <li style="margin-bottom:10px;">
-        <a href="{{ url_for('faculty_ui.faculty_print_log') }}" class="btn btn-primary-blue">
-          Print Exam Log
-        </a>
-      </li>
-      <li style="margin-bottom:10px;">
-        <a href="{{ url_for('faculty_ui.faculty_search_appointments') }}" class="btn btn-primary-blue">
-          Search Appointments
-        </a>
-      </li>
-      <li>
-        <form action="{{ url_for('auth.logout') }}" method="post" style="display:inline">
-          {{ csrf_token() if csrf_token is defined }}
-          <button type="submit" class="btn btn-primary-blue">Logout</button>
-        </form>
-      </li>
-    </ul>
-  </nav>
-
-  <p class="hint">
-    To cancel or reschedule an appointment, please enter the appointment’s
-    confirmation code on the <strong>“Search Appointments”</strong> page.
-  </p>
+  {% if exams and exams|length > 0 %}
+    <table role="grid" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="background-color:#f4f4f4;">
+          <th>Exam Name</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Location</th>
+          <th>Student</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in exams %}
+          <tr>
+            <td>{{ row.exam_name }}</td>
+            <td>{{ row.exam_date }}</td>
+            <td>{{ row.exam_time or 'TBA' }}</td>
+            <td>{{ row.exam_location }}</td>
+            <td>{{ row.first_name }} {{ row.last_name }}</td>
+            <td>{{ row.status }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No exam records found.</p>
+  {% endif %}
 </main>
 {% endblock %}

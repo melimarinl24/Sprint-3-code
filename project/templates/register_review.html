@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block content %}
+<main class="container" style="max-width:720px;margin:32px auto;">
+  <a href="{{ url_for('student_exam_bp.student_exams') }}">← Back</a>
+  <h1>Review & Confirm</h1>
+
+  <article class="card" style="padding:1rem;">
+    <h3>Student</h3>
+    <ul>
+      <li><strong>Name:</strong> {{ current_user.name }}</li>
+      <li><strong>Email:</strong> {{ current_user.email }}</li>
+      <li><strong>NSHE ID:</strong> {{ current_user.nshe_id or '—' }}</li>
+    </ul>
+
+    <h3>Exam</h3>
+    <ul>
+      <li><strong>Course:</strong> {{ exam.course_code }} — {{ exam.course_name }}</li>
+      <li><strong>Exam Type:</strong> {{ exam.exam_type }}</li>
+      <li><strong>Date:</strong> {{ exam.exam_date.strftime('%B %d, %Y') if exam.exam_date else 'TBA' }}</li>
+      <li><strong>Time:</strong> {{ exam.exam_time or 'TBA' }}</li>
+      <li><strong>Location:</strong> {{ exam.location }}</li>
+    </ul>
+
+        <form action="{{ url_for('student_ui.register_exam') }}" method="post" style="display:inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
+        <input type="hidden" name="exam_id" value="{{ exam.exam_id }}">
+        <button type="submit" class="btn btn-primary-blue">Confirm Registration</button>
+        </form>
+
+    <a href="{{ url_for('student_exam_bp.student_exams') }}" role="button" class="btn contrast" style="margin-left:0.5rem;">
+      Cancel
+    </a>
+  </article>
+</main>
+{% endblock %}

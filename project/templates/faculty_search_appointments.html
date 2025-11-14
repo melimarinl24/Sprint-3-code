@@ -3,29 +3,38 @@
 <main class="container" style="max-width:820px;margin:40px auto;padding:18px;">
   <h1>Search Appointments</h1>
 
-  <form method="POST" style="margin-bottom:20px;">
-    <input type="text" name="search_term" placeholder="Enter student name, exam name, or exam ID" required>
-    <button type="submit">Search</button>
+  <form method="POST" style="margin-bottom:24px; display:flex; gap:0.5rem; align-items:center;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
+    <input type="text" name="search_term"
+           placeholder="Enter student name, exam name, or exam ID"
+           aria-label="Search term"
+           required
+           style="flex:1; padding:0.5rem;">
+    <button type="submit" class="btn btn-primary-blue">Search</button>
   </form>
 
   {% if results %}
-    <table border="1" cellpadding="6" cellspacing="0" width="100%">
-      <tr>
-        <th>Exam</th>
-        <th>Date</th>
-        <th>Location</th>
-        <th>Status</th>
-        <th>Student</th>
-      </tr>
-      {% for row in results %}
-        <tr>
-          <td>{{ row.exam_name }}</td>
-          <td>{{ row.exam_date }}</td>
-          <td>{{ row.exam_location }}</td>
-          <td>{{ row.status }}</td>
-          <td>{{ row.first_name }} {{ row.last_name }}</td>
+    <table role="grid" style="width:100%; border-collapse:collapse;">
+      <thead>
+        <tr style="background:#f7f7f7;">
+          <th>Exam</th>
+          <th>Date</th>
+          <th>Location</th>
+          <th>Status</th>
+          <th>Student</th>
         </tr>
-      {% endfor %}
+      </thead>
+      <tbody>
+        {% for row in results %}
+          <tr>
+            <td>{{ row.exam_name }}</td>
+            <td>{{ row.exam_date }}</td>
+            <td>{{ row.exam_location }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.first_name }} {{ row.last_name }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
   {% elif request.method == 'POST' %}
     <p>No appointments found matching your search.</p>

@@ -1,163 +1,313 @@
-# project/auth.py
-from flask import Blueprint, request, redirect, url_for, render_template, flash
-from flask_login import login_required, logout_user, login_user, current_user
+from flask import Blueprint, request, redirect, url_for, render_template, flash, session, current_app
+from flask_login import login_required, logout_user, login_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import or_
 import re
 
 from . import db
-from .models import User, Role, Department, Major  # adjust if your models are in a different file
+from .models import User, Role, Department, Major
 
 auth = Blueprint('auth', __name__)
 
-# strict patterns
+# --------------------------
+# Regex patterns
+# --------------------------
 NSHE_RE = re.compile(r'^\d{10}$')
 STUDENT_EMAIL_RE = re.compile(r'^(\d{10})@student\.csn\.edu$', re.I)
-FACULTY_EMAIL_RE = re.compile(r'^[A-Za-z]+(?:\.[A-Za-z]+)*@csn\.edu$', re.I)
-
-def _email_lower(s: str) -> str:
-    return (s or '').strip().lower()
+FACULTY_EMAIL_RE = re.compile(r'^[a-z]+\.\d{6,10}@csn\.edu$', re.I)
 
 def _clean(s: str) -> str:
     return (s or '').strip()
 
+def _email_lower(s: str) -> str:
+    return (s or '').strip().lower()
+
 @auth.route('/signup', methods=['GET', 'POST'])
 def signup():
     roles = ['Student', 'Faculty']
+    departments = Department.query.all()
+    majors = Major.query.all()
 
-    # ---------- GET ----------
+    def render_signup_page(role_lower=None):
+        return render_template(
+            'signup.html',
+            roles=roles,
+            departments=departments,
+            majors=majors,
+            selected_role=role_lower
+        )
+
     if request.method == 'GET':
-        departments = Department.query.all()
-        return render_template('signup.html', roles=roles, departments=departments)
+        return render_signup_page()
 
-    # ---------- POST ----------
-    departments = Department.query.all()  # always available on POST too
-
-    role_raw   = _clean(request.form.get('role'))
-    role_lower = role_raw.lower()
+    role_raw = _clean(request.form.get('role'))
+    role_lower = role_raw.lower() if role_raw else ''
     first_name = _clean(request.form.get('first_name'))
-    last_name  = _clean(request.form.get('last_name'))
-    phone      = _clean(request.form.get('phone'))
-    email      = _email_lower(request.form.get('email'))
-
-    if role_lower not in ('student', 'faculty'):
-        return render_template('signup.html', roles=roles, departments=departments,
-                               errorMsg='Please choose Student or Faculty.')
-
-    if not first_name or not last_name or not phone:
-        return render_template('signup.html', roles=roles, departments=departments,
-                               errorMsg='First name, last name, and phone are required.')
-
-    nshe        = _clean(request.form.get('nshe'))
-    major_name  = _clean(request.form.get('major'))
-    department_id = request.form.get('department_id')  # <-- IMPORTANT: now uses FK
+    last_name = _clean(request.form.get('last_name'))
+    phone = _clean(request.form.get('phone'))
+    email_raw = _email_lower(request.form.get('email'))
+    nshe = _clean(request.form.get('nshe'))
+    major_name = _clean(request.form.get('major'))
+    department_id = _clean(request.form.get('department_id'))
     employee_id = _clean(request.form.get('employee_id'))
 
-    # Validate student vs faculty
-    password_plain = None
+    if role_lower not in ('student', 'faculty'):
+        flash('Please choose Student or Faculty.', 'signup')
+        return render_signup_page(role_lower)
+
+    if not first_name or not last_name or not phone:
+        flash('First name, last name, and phone are required.', 'signup')
+        return render_signup_page(role_lower)
 
     if role_lower == 'student':
-        m = STUDENT_EMAIL_RE.match(email)
+        m = STUDENT_EMAIL_RE.match(email_raw)
         if not m:
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='Student email must be NSHEID@student.csn.edu.')
-        email_nshe = m.group(1)
+            flash('Student email must be NSHEID@student.csn.edu.', 'signup')
+            return render_signup_page(role_lower)
 
+        email_nshe = m.group(1)
         if not NSHE_RE.match(nshe):
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='NSHE must be 10 digits.')
+            flash('NSHE must be exactly 10 digits.', 'signup')
+            return render_signup_page(role_lower)
+
         if nshe != email_nshe:
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='NSHE must match the email NSHE (before @).')
+            flash('NSHE must match the email prefix (before @).', 'signup')
+            return render_signup_page(role_lower)
 
         if not major_name:
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='Please choose your major.')
+            flash('Please choose your major.', 'signup')
+            return render_signup_page(role_lower)
 
         password_plain = nshe
 
-    else:  # faculty
-        if not FACULTY_EMAIL_RE.match(email):
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='Faculty email must be firstname.lastname@csn.edu.')
+    else:  # Faculty
+        if not employee_id or not re.match(r'^\d{6,10}$', employee_id):
+            flash('Employee ID must be 6–10 digits.', 'signup')
+            return render_signup_page(role_lower)
 
+        canonical_email = f"{first_name.strip().lower()}.{employee_id}@csn.edu"
+        if not FACULTY_EMAIL_RE.match(canonical_email):
+            flash('Faculty email must be firstname.employeeID@csn.edu.', 'signup')
+            return render_signup_page(role_lower)
+
+        email_raw = canonical_email
         if not department_id:
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='Department is required.')
-
-        if not employee_id:
-            return render_template('signup.html', roles=roles, departments=departments,
-                                   errorMsg='Employee ID is required.')
+            flash('Department is required.', 'signup')
+            return render_signup_page(role_lower)
 
         password_plain = employee_id
 
-    # Duplicate protection
-    if User.query.filter_by(email=email).first():
-        return render_template('signup.html', roles=roles, departments=departments,
-                               errorMsg='This email is already registered.')
-    if role_lower == 'student' and User.query.filter_by(nshe_id=nshe).first():
-        return render_template('signup.html', roles=roles, departments=departments,
-                               errorMsg='This NSHE is already registered.')
+    role_obj = Role.query.filter_by(name=role_lower.title()).first()
+    if not role_obj:
+        flash('Role not configured; contact admin.', 'signup')
+        return render_signup_page(role_lower)
 
-    # FK resolution
-    role = Role.query.filter_by(name=role_lower.title()).first()
-    major = Major.query.filter_by(name=major_name).first() if role_lower == 'student' else None
-    dept = Department.query.get(department_id) if role_lower == 'faculty' else None
+    dept = None
+    major = None
 
-    # Create user
-    full_name = f'{first_name} {last_name}'.strip()
+    if role_lower == 'student':
+        major = Major.query.filter_by(name=major_name).first()
+        if not major:
+            flash('Selected major not found.', 'signup')
+            return render_signup_page(role_lower)
+        dept = Department.query.get(major.department_id)
+    else:
+        try:
+            dept_id_int = int(department_id)
+        except (TypeError, ValueError):
+            flash('Invalid department selection.', 'signup')
+            return render_signup_page(role_lower)
+        dept = Department.query.get(dept_id_int)
+
+    if not dept:
+        flash('Invalid department selected.', 'signup')
+        return render_signup_page(role_lower)
+
+    email_lc = _email_lower(email_raw)
+
+    existing_user = None
+    if role_lower == 'student' and nshe:
+        existing_user = User.query.filter(
+            or_(User.nshe_id == nshe, User.email == email_lc)
+        ).first()
+    elif role_lower == 'faculty' and employee_id:
+        existing_user = User.query.filter(
+            or_(User.employee_id == employee_id, User.email == email_lc)
+        ).first()
+    else:
+        existing_user = User.query.filter_by(email=email_lc).first()
+
+    if existing_user:
+        if role_lower == 'student' and existing_user.nshe_id == nshe:
+            flash('This NSHE ID is already registered. Please try a different NSHE ID or log in instead.', 'signup')
+        elif role_lower == 'faculty' and existing_user.employee_id == employee_id:
+            flash('This Employee ID is already registered. Please try a different Employee ID or log in instead.', 'signup')
+        else:
+            flash('This email is already registered. Please try a different email or log in instead.', 'signup')
+        return render_signup_page(role_lower)
+
+    full_name = f"{first_name} {last_name}".strip()
     password_hash = generate_password_hash(password_plain)
 
-    user = User(
+    new_user = User(
         name=full_name,
-        email=email,
+        email=email_lc,
         phone=phone,
         nshe_id=nshe if role_lower == 'student' else None,
         employee_id=employee_id if role_lower == 'faculty' else None,
-        role_id=getattr(role, 'id', None),
-        major_id=getattr(major, 'id', None),
-        department_id=getattr(dept, 'id', None),
-        password_hash=password_hash
+        role_id=role_obj.id,
+        major_id=major.id if major else None,
+        department_id=dept.id,
+        password_hash=password_hash,
     )
 
-    db.session.add(user)
-    db.session.commit()
+    db.session.add(new_user)
+    try:
+        db.session.commit()
+    except IntegrityError as ie:
+        db.session.rollback()
+        msg = str(ie.orig).lower()
+        if 'email' in msg:
+            flash('This email is already registered.', 'signup')
+        elif 'nshe' in msg:
+            flash('This NSHE ID is already registered.', 'signup')
+        elif 'employee' in msg:
+            flash('This Employee ID is already registered.', 'signup')
+        else:
+            flash('Could not create the account due to a database constraint.', 'signup')
+        return render_signup_page(role_lower)
 
-    login_user(user, remember=True)
+    login_user(new_user, remember=True)
+    flash('Account created successfully!', 'auth')
 
-    # redirect to role dashboard
-    if role_lower == 'student':
-        return redirect(url_for('student_ui.student_dashboard'))
-    return redirect(url_for('faculty_ui.faculty_dashboard'))
+    if role_lower == 'faculty':
+        return redirect(url_for('faculty_ui.faculty_dashboard'))
+    return redirect(url_for('student_ui.student_dashboard'))
 
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
+    session.pop('_flashes', None)
+
     if request.method == 'POST':
         email = _email_lower(request.form.get('email'))
         password = request.form.get('password') or ''
         remember = bool(request.form.get('remember'))
 
         user = User.query.filter_by(email=email).first()
-        if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
-            return render_template('login.html', errorMsg='Invalid email or password.')
+        if not user or not check_password_hash(user.password_hash, password):
+            flash('Invalid email or password.', 'login')
+            return render_template('login.html')
 
         login_user(user, remember=remember)
+        flash('Login successful.', 'auth')
 
-        if getattr(getattr(user, 'role', None), 'name', '').lower() == 'faculty' or user.employee_id:
+        role_name = (user.role.name if user.role else '').lower()
+        if role_name == 'faculty':
             return redirect(url_for('faculty_ui.faculty_dashboard'))
         return redirect(url_for('student_ui.student_dashboard'))
 
     return render_template('login.html')
 
-@auth.route('/logout', methods=['GET', 'POST'])
+@auth.route('/logout', methods=['POST', 'GET'])
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'info')
-    return redirect(url_for('main.home'))
+    session.clear()
+    flash('You have been logged out.', 'logout')
+    return redirect(url_for('auth.login'))
+
+
+# ==========================================================
+# Password Reset (Forgot Password)
+# ==========================================================
+# Optional email sending: works if Flask-Mail is configured.
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
+
+try:
+    from flask_mail import Message
+    from . import mail  # only if you initialized Mail() in __init__.py
+    _MAIL_OK = True
+except Exception:
+    _MAIL_OK = False
+
+def _serializer():
+    # Uses your existing SECRET_KEY
+    return URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+
+def _make_token(email):
+    return _serializer().dumps(email, salt='password-reset-salt')
+
+def _read_token(token, max_age=3600):
+    try:
+        return _serializer().loads(token, salt='password-reset-salt', max_age=max_age)
+    except (SignatureExpired, BadSignature):
+        return None
 
 @auth.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        flash("If this email is registered, a reset link was sent.")
-        return redirect(url_for('auth.login'))
+        email = _email_lower(request.form.get('email'))
+        user = User.query.filter_by(email=email).first()
+
+        # Always respond the same for privacy (whether or not user exists)
+        if not user:
+            flash('If that email exists, a reset link has been sent.', 'forgot')
+            return redirect(url_for('auth.login'))
+
+        token = _make_token(email)
+        reset_link = url_for('auth.reset_password', token=token, _external=True)
+
+        # Try to send mail if configured; otherwise show link so you can test
+        if _MAIL_OK:
+            try:
+                sender = current_app.config.get('MAIL_DEFAULT_SENDER') or email
+                msg = Message(
+                    subject="Password Reset Request",
+                    recipients=[email],
+                    body=(
+                        "Hello,\n\n"
+                        f"To reset your password, click the link below:\n{reset_link}\n\n"
+                        "If you did not request this, please ignore this email.\n\n"
+                        "CSN Exam Registration System"
+                    )
+                )
+                mail.send(msg)
+                flash('A password reset link has been sent to your email.', 'forgot')
+                return redirect(url_for('auth.login'))
+            except Exception:
+                # Fall through to showing the link on the page if email fails
+                pass
+
+        # Mail not configured or failed: render a page that shows the link
+        flash('Email not configured — showing a one-time reset link below for testing.', 'forgot')
+        return render_template('forgot_password.html', reset_link=reset_link)
+
     return render_template('forgot_password.html')
+
+@auth.route('/reset_password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    email = _read_token(token)
+    if not email:
+        flash('The reset link is invalid or has expired.', 'reset')
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        new_password = (request.form.get('password') or '').strip()
+        confirm = (request.form.get('confirm_password') or '').strip()
+        if not new_password or new_password != confirm:
+            flash('Passwords do not match.', 'reset')
+            return render_template('reset_password.html', token=token)
+
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('User not found.', 'reset')
+            return redirect(url_for('auth.forgot_password'))
+
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+
+        flash('Your password has been reset. Please log in.', 'reset')
+        return redirect(url_for('auth.login'))
+
+    return render_template('reset_password.html', token=token)

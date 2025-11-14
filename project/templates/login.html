@@ -14,28 +14,36 @@
     </p>
   {% endif %}
 
+  {# Show only relevant login/auth flash messages #}
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       {% for category, message in messages %}
-        <p class="flash {{ category }}">{{ message }}</p>
+        {% if 'login' in category or 'auth' in category %}
+          <p class="flash {{ category }}" style="text-align:center;color:#b20710;margin:.5rem 0 1rem;">
+            {{ message }}
+          </p>
+        {% endif %}
       {% endfor %}
     {% endif %}
   {% endwith %}
 
   <form id="loginForm" class="login-form" method="post" action="{{ url_for('auth.login') }}" aria-label="Login form">
+    <!-- CSRF token -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+
     <input type="email" id="email" name="email" placeholder="Student Email" required>
     <input type="password" id="password" name="password" placeholder="Password" required>
 
     <div class="login-actions">
-        <label class="remember-label">
-            <input type="checkbox" id="remember" name="remember"> Remember me
-        </label>
-        <button type="submit" class="btn btn-primary-blue">Login</button>
+      <label class="remember-label">
+        <input type="checkbox" id="remember" name="remember"> Remember me
+      </label>
+      <button type="submit" class="btn btn-primary-blue">Login</button>
     </div>
 
     <p class="forgot-line">
-        <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
+      <a href="{{ url_for('auth.forgot_password') }}">Forgot password?</a>
     </p>
   </form>
 </div>
