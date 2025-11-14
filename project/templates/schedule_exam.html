@@ -8,95 +8,89 @@
         class="exam-form"
         style="display:flex; flex-direction:column; gap:1rem;">
 
+    <!-- DATE -->
+    <label for="exam_date"><strong>Select Date:</strong></label>
+    <input type="text" id="exam_date" name="exam_date"
+           placeholder="Select exam date"
+           required style="padding:0.4rem;">
+
     <!-- LOCATION -->
-    <label for="location">Select Location:</label>
-    <select id="location" name="location_id" required>
+    <label for="location"><strong>Select Location:</strong></label>
+    <select id="location" name="location_id" disabled required>
       <option value="">-- Choose a location --</option>
-      {% if locations %}
-        {% for loc in locations %}
-          <option value="{{ loc['id'] }}">{{ loc['name'] }}</option>
-        {% endfor %}
-      {% else %}
-        <option disabled>(No locations available)</option>
-      {% endif %}
+      {% for loc in locations %}
+        <option value="{{ loc['id'] }}">{{ loc['name'] }}</option>
+      {% endfor %}
     </select>
 
-    <!-- DATE -->
-    <label for="exam_date">Select Date:</label>
-    <input
-      type="text"
-      id="exam_date"
-      name="exam_date"
-      placeholder="Select exam date"
-      required
-      style="padding:0.4rem;">
-
     <!-- TIME -->
-    <label for="timeslot">Select Time:</label>
-    <select id="timeslot" name="timeslot_id" required>
+    <label for="timeslot"><strong>Select Time:</strong></label>
+    <select id="timeslot" name="timeslot_id" disabled required>
       <option value="">-- Choose a time --</option>
-      {% if timeslots %}
-        {% for slot in timeslots %}
-          <option value="{{ slot['id'] }}">
-            {{ slot['start_time'] }} - {{ slot['end_time'] }}
-          </option>
-        {% endfor %}
-      {% else %}
-        <option disabled>(No time slots available)</option>
-      {% endif %}
+      {% for slot in timeslots %}
+        <option value="{{ slot['id'] }}">
+          {{ slot['start_time'] }} - {{ slot['end_time'] }}
+        </option>
+      {% endfor %}
     </select>
 
     <!-- EXAM -->
-    <label for="exam">Select Exam:</label>
-    <select id="exam" name="exam_id" required>
+    <label for="exam"><strong>Select Exam:</strong></label>
+    <select id="exam" name="exam_id" disabled required>
       <option value="">-- Choose an exam --</option>
-      {% if exams %}
-        {% for exam in exams %}
-          <option value="{{ exam['exam_id'] }}">
-            {{ exam['exam_type'] }} — {{ exam['professor_name'] }}
-          </option>
-        {% endfor %}
-      {% else %}
-        <option disabled>(No exams available)</option>
-      {% endif %}
     </select>
 
-    <button type="submit" class="btn-primary-purple" style="margin-top:1rem;">
+    <!-- SEAT WARNING -->
+    <div id="seat-warning" style="color: red; font-weight: bold; margin-top: 5px;"></div>
+
+    <button type="submit" id="submit-btn"
+            class="btn-primary-purple"
+            disabled style="margin-top:1rem;">
       Submit
     </button>
+
   </form>
 </div>
 
 
-<!-- ============================= -->
-<!-- JAVASCRIPT (SAFE JINJA → JS) -->
-<!-- ============================= -->
+<!-- ====================================================== -->
+<!-- JAVASCRIPT LOGIC FOR CALENDAR + DROPDOWNS -->
+<!-- ====================================================== -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-  // SAFE JSON PARSING FOR ALL JINJA VARIABLES
-  const availableDates = JSON.parse('{{ (exam_dates or []) | tojson | safe }}');
-  const minDate = "{{ min_date or '' }}";
-  const maxDate = "{{ max_date or '' }}";
+  // SAFE JSON DATA FROM FLASK
+  const allExams = JSON.parse('{{ exams | tojson | safe }}');
+  const availableDates = JSON.parse('{{ exam_dates | tojson | safe }}');
+
+  const minDate = "{{ min_date }}";
+  const maxDate = "{{ max_date }}";
+
+  const examDropdown = document.getElementById("exam");
+  const locDropdown = document.getElementById("location");
+  const timeDropdown = document.getElementById("timeslot");
+  const submitBtn = document.getElementById("submit-btn");
+  const seatWarning = document.getElementById("seat-warning");
 
   const availableSet = new Set(availableDates);
 
   function disableFn(date) {
     const ymd = date.toISOString().slice(0,10);
-    const isWeekend = (date.getDay() === 0 || date.getDay() === 6);
-    const notAvailable = !availableSet.has(ymd);
-    return isWeekend || notAvailable;
+    const weekend = (date.getDay() === 0 || date.getDay() === 6);
+    const notExamDate = !availableSet.has(ymd);
+    return weekend || notExamDate;
   }
 
   flatpickr('#exam_date', {
     dateFormat: 'Y-m-d',
-    minDate: minDate || null,
-    maxDate: maxDate || null,
+    minDate: minDate,
+    maxDate: maxDate,
     disable: [disableFn],
     altInput: true,
     altFormat: 'F j, Y',
     locale: { firstDayOfWeek: 1 },
 
+    // GO TO TODAY BUTTON
     onOpen(selectedDates, dateStr, instance) {
       const container = instance.calendarContainer;
       if (!container || container.querySelector('.go-today-btn')) return;
@@ -108,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.style.cssText = `
         display:block;
         margin:6px auto;
-        background:#007bff;
+        background:#6a0dad;
         color:#fff;
         border:none;
         border-radius:5px;
@@ -117,17 +111,84 @@ document.addEventListener('DOMContentLoaded', function () {
         cursor:pointer;
       `;
 
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', () => {
         const now = new Date();
         instance.setDate(now);
         instance.jumpToDate(now);
       });
 
-      const nav = container.querySelector('.flatpickr-months') ||
-                  container.querySelector('.flatpickr-innerContainer') ||
-                  container.firstElementChild;
+      container.querySelector('.flatpickr-months')
+        .insertAdjacentElement('afterend', btn);
+    },
 
-      nav.insertAdjacentElement('afterend', btn);
+    onChange: function(selectedDates) {
+      if (!selectedDates.length) return;
+
+      const chosen = selectedDates[0].toISOString().slice(0, 10);
+
+      locDropdown.disabled = false;
+      timeDropdown.disabled = false;
+      examDropdown.disabled = false;
+
+      examDropdown.innerHTML = `<option value="">-- Choose an exam --</option>`;
+      seatWarning.textContent = ""; // reset
+
+      const filtered = allExams.filter(e => e.exam_date === chosen);
+
+      filtered.forEach(e => {
+        const opt = document.createElement("option");
+        opt.value = e.exam_id;
+        opt.textContent = `${e.exam_type} — ${e.professor_name} (${e.remaining} seats left)`;
+        opt.dataset.remaining = e.remaining;
+        examDropdown.appendChild(opt);
+      });
+
+
+      examDropdown.addEventListener("change", () => {
+          const selectedOpt = examDropdown.selectedOptions[0];
+          const remaining = Number(selectedOpt?.dataset.remaining || 0);
+
+          if (remaining <= 5) {
+              seatWarning.textContent = ` Only ${remaining} seats left`;
+          } else {
+              seatWarning.textContent = "";
+          }
+      });
+            submitBtn.disabled = false;
+          }
+        });
+
+  // ======================================================
+  // SEAT WARNING SYSTEM
+  // ======================================================
+  examDropdown.addEventListener("change", function () {
+    const selectedId = parseInt(this.value);
+
+    if (!selectedId) {
+      seatWarning.textContent = "";
+      return;
+    }
+
+    const exam = allExams.find(e => e.exam_id === selectedId);
+
+    if (!exam) {
+      seatWarning.textContent = "";
+      return;
+    }
+
+    const remaining = exam.remaining;
+
+    if (remaining <= 0) {
+      seatWarning.textContent = "❌ This exam is full.";
+    }
+    else if (remaining <= 3) {
+      seatWarning.textContent = ` Only ${remaining} seats left`;
+    }
+    else if (remaining <= 5) {
+      seatWarning.textContent = ` ${remaining} seats available.`;
+    }
+    else {
+      seatWarning.textContent = "";
     }
   });
 

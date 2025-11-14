@@ -90,7 +90,7 @@ def create_app():
     app.register_blueprint(auth)
     print("✅ auth registered")
 
-    app.register_blueprint(student_ui)
+    app.register_blueprint(student_ui, url_prefix="/student")
     print("📘 Blueprint names after register =", app.blueprints.keys())
 
     app.register_blueprint(faculty_ui, url_prefix="/faculty")

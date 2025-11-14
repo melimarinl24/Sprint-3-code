@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
   <!-- ==========================================================
-       Flatpickr Core + Custom Purple Theme
+       Flatpickr Core
        ========================================================== -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
@@ -28,194 +28,172 @@
       border-radius: 12px;
       box-shadow: 0 0 15px rgba(136, 84, 255, 0.2);
     }
+
     .flatpickr-months, .flatpickr-weekdays {
       background: #f6f3ff;
       color: #3c096c;
     }
-    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+
+    .flatpickr-day.selected,
+    .flatpickr-day.startRange,
+    .flatpickr-day.endRange {
       background: #6a0dad !important;
       border-color: #6a0dad !important;
       color: white !important;
     }
+
     .flatpickr-day.today {
       border-color: #b084f8 !important;
       color: #6a0dad !important;
-      font-weight: 700;
+      font-weight: 700 !important;
     }
+
     .flatpickr-day:hover {
       background: #e7d3ff !important;
+    }
+
+    .go-today-btn {
+      margin: 6px auto;
+      display: block;
+      background: #6a0dad;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
     }
   </style>
 </head>
 
+
 <body class="{% block body_class %}{% endblock %}">
 
-  {% block site_header %}
-  <!-- ==========================================================
-       SITE HEADER (Top Navigation)
-       ========================================================== -->
-  <header class="site-header">
-    <div class="brand">
-      <a href="{{ url_for('main.home') }}" aria-label="Go to home">
-        <img src="{{ url_for('static', filename='images/header-logo.png') }}" alt="CSN Logo" class="header-logo">
-      </a>
-      <h1 class="site-title">Exam Registration Portal</h1>
-    </div>
-
-    <nav>
-      <ul>
-        <li><a class="nav-btn nav-btn-outline" href="{{ url_for('main.home') }}">Home</a></li>
-
-        {% if not current_user.is_authenticated %}
-          <li><a class="nav-btn nav-btn-outline" href="{{ url_for('auth.login') }}">Log In</a></li>
-          <li><a class="btn-primary-purple" href="{{ url_for('auth.signup') }}">Sign Up</a></li>
-        {% else %}
-          {% if current_user.role and current_user.role.name|lower == 'faculty' %}
-            <li><a class="nav-btn nav-btn-outline" href="{{ url_for('faculty_ui.faculty_dashboard') }}">Dashboard</a></li>
-          {% else %}
-            <li><a class="nav-btn nav-btn-outline" href="{{ url_for('student_ui.student_dashboard') }}">Dashboard</a></li>
-          {% endif %}
-
-          <li>
-            <form id="logout-form" method="POST" action="{{ url_for('auth.logout') }}" style="display:inline;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
-              <button class="btn-primary-purple" type="submit">Log Out</button>
-            </form>
-          </li>
-        {% endif %}
-      </ul>
-    </nav>
-  </header>
-  {% endblock %}
-
-  <!-- ==========================================================
-       MAIN CONTENT AREA
-       ========================================================== -->
-  <main class="page-container">
-    {% block content %}{% endblock %}
-  </main>
-
-  {% if current_user.is_authenticated %}
-  <!-- ==========================================================
-       SESSION TIMEOUT MODAL
-       ========================================================== -->
-  <div id="session-timeout-overlay" style="display:none;"></div>
-  <div id="session-timeout-modal" role="dialog" aria-modal="true" aria-labelledby="timeout-title" aria-describedby="timeout-desc" style="display:none;">
-    <div class="modal-content">
-      <h2 id="timeout-title">Session Timeout Warning</h2>
-      <p id="timeout-desc">You will be logged out soon due to inactivity.</p>
-      <p><strong>Click “Stay Logged In” to continue your session.</strong></p>
-      <p>Time remaining: <span id="timeout-countdown">10</span> seconds</p>
-      <button id="stay-logged-in" type="button" aria-label="Stay Logged In">Stay Logged In</button>
-    </div>
+{% block site_header %}
+<!-- ==========================================================
+     SITE HEADER
+     ========================================================== -->
+<header class="site-header">
+  <div class="brand">
+    <a href="{{ url_for('main.home') }}">
+      <img src="{{ url_for('static', filename='images/header-logo.png') }}" class="header-logo" alt="Logo">
+    </a>
+    <h1 class="site-title">Exam Registration Portal</h1>
   </div>
-  {% endif %}
 
-  <!-- ==========================================================
-       FOOTER
-       ========================================================== -->
-  <footer class="footer">
-    <p>&copy; 2025 Exam Registration System</p>
-  </footer>
+  <nav>
+    <ul>
+      <li><a class="nav-btn nav-btn-outline" href="{{ url_for('main.home') }}">Home</a></li>
 
-  {% if current_user.is_authenticated %}
-  <!-- ==========================================================
-       SESSION TIMEOUT SCRIPT
-       ========================================================== -->
-  <script>
-    (function () {
-      const WARN_AFTER_MS   = 28 * 60 * 1000;
-      const LOGOUT_AFTER_MS = 30 * 60 * 1000;
-      const GRACE_MS = LOGOUT_AFTER_MS - WARN_AFTER_MS;
-      let warnTimer = null, logoutTimer = null, countdownTimer = null;
-      let modalVisible = false, logoutDeadline = null;
+      {% if not current_user.is_authenticated %}
+        <li><a class="nav-btn nav-btn-outline" href="{{ url_for('auth.login') }}">Log In</a></li>
+        <li><a class="btn-primary-purple" href="{{ url_for('auth.signup') }}">Sign Up</a></li>
+      {% else %}
+        {% if current_user.role and current_user.role.name|lower == 'faculty' %}
+          <li><a class="nav-btn nav-btn-outline" href="{{ url_for('faculty_ui.faculty_dashboard') }}">Dashboard</a></li>
+        {% else %}
+          <li><a class="nav-btn nav-btn-outline" href="{{ url_for('student_ui.student_dashboard') }}">Dashboard</a></li>
+        {% endif %}
 
-      const overlay = document.getElementById('session-timeout-overlay');
-      const modal   = document.getElementById('session-timeout-modal');
-      const stayBtn = document.getElementById('stay-logged-in');
-      const countdownEl = document.getElementById('timeout-countdown');
+        <li>
+          <form id="logout-form" method="POST" action="{{ url_for('auth.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token is defined }}">
+            <button type="submit" class="btn-primary-purple">Log Out</button>
+          </form>
+        </li>
+      {% endif %}
+    </ul>
+  </nav>
+</header>
+{% endblock %}
 
-      function show(el) { el.style.display = 'block'; }
-      function hide(el) { el.style.display = 'none'; }
 
-      function startIdleTimers() {
-        clearTimers(); modalVisible = false;
-        warnTimer = setTimeout(onWarn, WARN_AFTER_MS);
-      }
+<!-- ==========================================================
+     MAIN PAGE AREA
+     ========================================================== -->
+<main class="page-container">
+  {% block content %}{% endblock %}
+</main>
 
-      function clearTimers() {
-        clearTimeout(warnTimer);
-        clearTimeout(logoutTimer);
-        clearInterval(countdownTimer);
-      }
 
-      function onWarn() {
-        modalVisible = true;
-        logoutDeadline = Date.now() + GRACE_MS;
-        updateCountdown();
-        show(overlay); show(modal);
-        countdownTimer = setInterval(updateCountdown, 250);
-        logoutTimer = setTimeout(logoutUser, GRACE_MS);
-      }
+<!-- ==========================================================
+     FOOTER
+     ========================================================== -->
+<footer class="footer">
+  <p>&copy; 2025 Exam Registration System</p>
+</footer>
 
-      function updateCountdown() {
-        const msLeft = Math.max(0, logoutDeadline - Date.now());
-        const seconds = Math.ceil(msLeft / 1000);
-        if (countdownEl) countdownEl.textContent = String(seconds);
-      }
 
-      function stayLoggedIn() {
-        hide(modal); hide(overlay);
-        modalVisible = false;
-        clearTimers(); startIdleTimers();
-      }
+{% if current_user.is_authenticated %}
+<!-- ==========================================================
+     SESSION TIMEOUT MODAL
+     ========================================================== -->
+<div id="session-timeout-overlay" style="display:none;"></div>
+<div id="session-timeout-modal" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal-content">
+    <h2 id="timeout-title">Session Timeout Warning</h2>
+    <p id="timeout-desc">You will be logged out soon due to inactivity.</p>
+    <p><strong>Click “Stay Logged In” to continue your session.</strong></p>
+    <p>Time remaining: <span id="timeout-countdown">10</span> seconds</p>
+    <button id="stay-logged-in" type="button">Stay Logged In</button>
+  </div>
+</div>
 
-      function logoutUser() {
-        const f = document.getElementById('logout-form');
-        if (f) f.submit(); else window.location.href = "{{ url_for('auth.logout') }}";
-      }
+<script>
+(function () {
+  const WARN_AFTER = 28 * 60 * 1000;
+  const LOGOUT_AFTER = 30 * 60 * 1000;
+  const GRACE = LOGOUT_AFTER - WARN_AFTER;
 
-      if (stayBtn) stayBtn.addEventListener('click', stayLoggedIn);
-      function maybeReset() { if (!modalVisible) startIdleTimers(); }
+  let warnTimer, logoutTimer, countdownTimer;
+  let modalVisible = false, logoutDeadline = null;
 
-      window.addEventListener('load', maybeReset);
-      document.addEventListener('mousemove', maybeReset);
-      document.addEventListener('keydown', maybeReset);
-      document.addEventListener('click', maybeReset);
-      document.addEventListener('scroll', maybeReset, { passive: true });
-      startIdleTimers();
-    })();
-  </script>
-  {% endif %}
+  const overlay = document.getElementById('session-timeout-overlay');
+  const modal   = document.getElementById('session-timeout-modal');
+  const stayBtn = document.getElementById('stay-logged-in');
+  const countdownEl = document.getElementById('timeout-countdown');
 
-  <!-- ==========================================================
-       FLATPICKR INITIALIZATION
-       ========================================================== -->
-  <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const dateEl = document.querySelector('#exam_date');
-    if (dateEl && window.flatpickr) {
-      const now = new Date();
-      const min = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const max = new Date(now.getFullYear(), now.getMonth() + 6, now.getDate());
+  function resetTimers() {
+    clearTimeout(warnTimer);
+    clearTimeout(logoutTimer);
+    clearInterval(countdownTimer);
+    warnTimer = setTimeout(showWarning, WARN_AFTER);
+  }
 
-      flatpickr(dateEl, {
-        dateFormat: 'Y-m-d',
-        minDate: min,
-        maxDate: max,
-        disable: [
-          function (d) {
-            const day = d.getDay();
-            return day === 0 || day === 6;
-          }
-        ],
-        locale: { firstDayOfWeek: 1 },
-        altInput: true,
-        altFormat: 'F j, Y'
-      });
-    }
+  function showWarning() {
+    modalVisible = true;
+    logoutDeadline = Date.now() + GRACE;
+
+    overlay.style.display = 'block';
+    modal.style.display = 'block';
+
+    countdownTimer = setInterval(() => {
+      const left = Math.max(0, logoutDeadline - Date.now());
+      countdownEl.textContent = Math.ceil(left / 1000);
+    }, 200);
+
+    logoutTimer = setTimeout(() => {
+      document.getElementById('logout-form').submit();
+    }, GRACE);
+  }
+
+  stayBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+    overlay.style.display = 'none';
+    modalVisible = false;
+    resetTimers();
   });
-  </script>
+
+  window.addEventListener('load', resetTimers);
+  ['mousemove','keydown','click','scroll'].forEach(evt => {
+    document.addEventListener(evt, () => {
+      if (!modalVisible) resetTimers();
+    }, { passive: true });
+  });
+
+})();
+</script>
+{% endif %}
 
 </body>
 </html>
