@@ -1,0 +1,32 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="landing-viewport">
+  <h2 class="page-heading">Reset Your Password</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <p class="flash {{ category }}">{{ message }}</p>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" class="login-form" style="max-width:400px;margin:auto;">
+    <label for="current_password">Current Password</label>
+    <input type="password" name="current_password" required>
+
+    <label for="new_password">New Password</label>
+    <input type="password" name="new_password" required
+           placeholder="At least 1 uppercase, 1 number, 1 special character">
+
+    <label for="confirm_password">Confirm New Password</label>
+    <input type="password" name="confirm_password" required>
+
+    <button type="submit" class="btn btn-primary-blue">Update Password</button>
+  </form>
+
+  <p style="text-align:center;margin-top:1rem;">
+    <a href="{{ url_for('student_ui.student_dashboard') }}">Back to Dashboard</a>
+  </p>
+</div>
+{% endblock %}
