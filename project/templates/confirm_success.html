@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block title %}Exam Confirmed{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-lg border-0 rounded-4">
+
+    <!-- HEADER -->
+    <div class="card-header bg-success text-white text-center py-3 rounded-top-4">
+      <h2 class="mb-0">Appointment Booked Successfully!</h2>
+    </div>
+
+    <div class="card-body p-4 text-center">
+
+      <p class="lead mb-4">
+        Your exam has been scheduled.
+      </p>
+
+      <hr>
+
+      <!-- CONFIRMATION NUMBER -->
+      <div class="mt-4 mb-4">
+        <h5><strong>Confirmation Code:</strong></h5>
+        <p class="fs-4 fw-bold text-success">{{ info.confirmation_code }}</p>
+      </div>
+
+      <!-- DETAILS -->
+      <div class="text-start mx-auto" style="max-width: 450px;">
+        <p><strong>Exam:</strong> {{ info.exam_title }}</p>
+        <p><strong>Professor:</strong> {{ info.professor_name }}</p>
+        <p><strong>Date:</strong> {{ info.exam_date.strftime('%B %d, %Y') }}</p>
+        <p><strong>Time:</strong> {{ info.start_time }} - {{ info.end_time }}</p>
+        <p><strong>Location:</strong> {{ info.location }}</p>
+      </div>
+
+      <hr>
+
+      <!-- DISCLAIMER -->
+      <p class="text-muted">
+        <em>Please make sure to arrive at least <strong>10 minutes before your scheduled exam time</strong>.</em>
+      </p>
+
+      <hr>
+
+      <div class="mt-4">
+        <a href="{{ url_for('student_ui.student_dashboard') }}" class="btn btn-primary btn-lg rounded-3">
+          Continue
+        </a>
+        <a href="{{ url_for('student_ui.student_appointments') }}" class="btn btn-outline-secondary btn-lg rounded-3 ms-2">
+          View My Appointments
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

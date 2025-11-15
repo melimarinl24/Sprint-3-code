@@ -525,3 +525,25 @@ nav ul{list-style:none; margin:0; padding:0; display:flex; gap:14px}
 }
 
 
+.flash-container {
+  margin-bottom: 20px;
+}
+
+.alert {
+  padding: 12px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.alert-error {
+  background-color: #ffe5e5;
+  color: #a40000;
+  border-left: 4px solid #d60000;
+}
+
+.alert-success {
+  background-color: #eaffea;
+  color: #0a7a0a;
+  border-left: 4px solid #0f9c0f;
+}

@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "layout.html" %}
 {% block title %}Booking Confirmation{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
   <div class="card shadow-lg border-0 rounded-4">
     <div class="card-header bg-success text-white text-center py-3 rounded-top-4">
-      <h2 class="mb-0" Appointment Confirmed</h2>
+      <h2 class="mb-0">Appointment Confirmed</h2>
     </div>
 
     <div class="card-body p-4 text-center">
@@ -22,9 +22,21 @@
 
       <div class="text-start mx-auto" style="max-width: 450px;">
         <p><strong>Exam Title:</strong> {{ info.exam_title }}</p>
-        <p><strong>Date:</strong> {{ info.exam_date.strftime('%B %d, %Y') if info.exam_date else info.exam_date }}</p>
-        <p><strong>Time:</strong> {{ info.exam_time.strftime('%I:%M %p') if info.exam_time else info.exam_time }}</p>
-        <p><strong>Location:</strong> {{ info.exam_location }}</p>
+        <p><strong>Date:</strong>
+          {% if info.exam_date %}
+            {{ info.exam_date.strftime('%B %d, %Y') }}
+          {% else %}
+            N/A
+          {% endif %}
+        </p>
+        <p><strong>Time:</strong>
+          {% if info.exam_time %}
+            {{ info.exam_time.strftime('%I:%M %p') }}
+          {% else %}
+            N/A
+          {% endif %}
+        </p>
+        <p><strong>Location:</strong> {{ info.exam_location or 'TBD' }}</p>
       </div>
 
       <hr>

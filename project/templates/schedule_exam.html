@@ -1,18 +1,32 @@
 {% extends "layout.html" %}
+
 {% block content %}
+
+<!-- PAGE FLASH MESSAGES -->
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <div class="alert alert-{{ category }}">{{ message }}</div>
+{% endfor %}
 
 <div class="page-section" style="max-width: 520px; margin: 0 auto;">
   <h2>Schedule an Exam</h2>
 
-  <form method="POST" action="{{ url_for('student_ui.student_exams') }}"
+  <form method="POST"
+        action="{{ url_for('student_ui.student_exams') }}"
         class="exam-form"
         style="display:flex; flex-direction:column; gap:1rem;">
 
+    <!-- CSRF -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <!-- DATE -->
     <label for="exam_date"><strong>Select Date:</strong></label>
-    <input type="text" id="exam_date" name="exam_date"
+    <input type="text"
+           id="exam_date"
+           name="exam_date"
            placeholder="Select exam date"
-           required style="padding:0.4rem;">
+           autocomplete="off"
+           required
+           style="padding:0.4rem;">
 
     <!-- LOCATION -->
     <label for="location"><strong>Select Location:</strong></label>
@@ -41,56 +55,64 @@
     </select>
 
     <!-- SEAT WARNING -->
-    <div id="seat-warning" style="color: red; font-weight: bold; margin-top: 5px;"></div>
+    <div id="seat-warning"
+         style="color: red; font-weight: bold; margin-top: 5px;"></div>
 
-    <button type="submit" id="submit-btn"
+    <button type="submit"
+            id="submit-btn"
             class="btn-primary-purple"
-            disabled style="margin-top:1rem;">
+            disabled
+            style="margin-top:1rem; cursor:not-allowed;">
       Submit
     </button>
 
   </form>
 </div>
 
-
-<!-- ====================================================== -->
-<!-- JAVASCRIPT LOGIC FOR CALENDAR + DROPDOWNS -->
-<!-- ====================================================== -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
-  // SAFE JSON DATA FROM FLASK
-  const allExams = JSON.parse('{{ exams | tojson | safe }}');
-  const availableDates = JSON.parse('{{ exam_dates | tojson | safe }}');
+  // ----- SAFE JSON FROM FLASK (NO QUOTES AROUND IT) -----
+  const allExams       = {{ exams | tojson }};
+  const availableDates = {{ exam_dates | tojson }};
 
   const minDate = "{{ min_date }}";
   const maxDate = "{{ max_date }}";
 
   const examDropdown = document.getElementById("exam");
-  const locDropdown = document.getElementById("location");
+  const locDropdown  = document.getElementById("location");
   const timeDropdown = document.getElementById("timeslot");
-  const submitBtn = document.getElementById("submit-btn");
-  const seatWarning = document.getElementById("seat-warning");
+  const submitBtn    = document.getElementById("submit-btn");
+  const seatWarning  = document.getElementById("seat-warning");
 
   const availableSet = new Set(availableDates);
 
+  // Enable/disable submit button based on selections
+  function updateSubmitState() {
+    const ready = examDropdown.value && locDropdown.value && timeDropdown.value;
+    submitBtn.disabled = !ready;
+    submitBtn.style.cursor = ready ? "pointer" : "not-allowed";
+  }
+
+  // Disable weekends + days that don't have exams
   function disableFn(date) {
     const ymd = date.toISOString().slice(0,10);
-    const weekend = (date.getDay() === 0 || date.getDay() === 6);
+    const weekend     = (date.getDay() === 0 || date.getDay() === 6);
     const notExamDate = !availableSet.has(ymd);
     return weekend || notExamDate;
   }
 
+  // ----- FLATPICKR INITIALIZATION -----
   flatpickr('#exam_date', {
     dateFormat: 'Y-m-d',
     minDate: minDate,
     maxDate: maxDate,
-    disable: [disableFn],
-    altInput: true,
+    disable: [
+      function(date) { return disableFn(date); }
+    ],
+
     altFormat: 'F j, Y',
     locale: { firstDayOfWeek: 1 },
 
-    // GO TO TODAY BUTTON
     onOpen(selectedDates, dateStr, instance) {
       const container = instance.calendarContainer;
       if (!container || container.querySelector('.go-today-btn')) return;
@@ -121,51 +143,44 @@ document.addEventListener('DOMContentLoaded', function () {
         .insertAdjacentElement('afterend', btn);
     },
 
-    onChange: function(selectedDates) {
+    onChange(selectedDates) {
       if (!selectedDates.length) return;
 
+      // Date selected → enable dropdowns
       const chosen = selectedDates[0].toISOString().slice(0, 10);
 
-      locDropdown.disabled = false;
+      locDropdown.disabled  = false;
       timeDropdown.disabled = false;
       examDropdown.disabled = false;
 
-      examDropdown.innerHTML = `<option value="">-- Choose an exam --</option>`;
-      seatWarning.textContent = ""; // reset
+      // Reset exam dropdown and seat warning
+      examDropdown.innerHTML =
+        '<option value="">-- Choose an exam --</option>';
+      seatWarning.textContent = "";
 
+      // Filter exams for this date
       const filtered = allExams.filter(e => e.exam_date === chosen);
 
       filtered.forEach(e => {
         const opt = document.createElement("option");
         opt.value = e.exam_id;
-        opt.textContent = `${e.exam_type} — ${e.professor_name} (${e.remaining} seats left)`;
+        opt.textContent =
+          `${e.exam_type} — ${e.professor_name} (${e.remaining} seats left)`;
         opt.dataset.remaining = e.remaining;
         examDropdown.appendChild(opt);
       });
 
+      updateSubmitState();
+    }
+  });
 
-      examDropdown.addEventListener("change", () => {
-          const selectedOpt = examDropdown.selectedOptions[0];
-          const remaining = Number(selectedOpt?.dataset.remaining || 0);
-
-          if (remaining <= 5) {
-              seatWarning.textContent = ` Only ${remaining} seats left`;
-          } else {
-              seatWarning.textContent = "";
-          }
-      });
-            submitBtn.disabled = false;
-          }
-        });
-
-  // ======================================================
-  // SEAT WARNING SYSTEM
-  // ======================================================
+  // ----- SEAT WARNING -----
   examDropdown.addEventListener("change", function () {
-    const selectedId = parseInt(this.value);
+    const selectedId = parseInt(this.value, 10);
 
     if (!selectedId) {
       seatWarning.textContent = "";
+      updateSubmitState();
       return;
     }
 
@@ -173,6 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!exam) {
       seatWarning.textContent = "";
+      updateSubmitState();
       return;
     }
 
@@ -180,18 +196,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (remaining <= 0) {
       seatWarning.textContent = "❌ This exam is full.";
-    }
-    else if (remaining <= 3) {
-      seatWarning.textContent = ` Only ${remaining} seats left`;
-    }
-    else if (remaining <= 5) {
-      seatWarning.textContent = ` ${remaining} seats available.`;
-    }
-    else {
+    } else if (remaining <= 3) {
+      seatWarning.textContent = `Only ${remaining} seats left.`;
+    } else if (remaining <= 5) {
+      seatWarning.textContent = `${remaining} seats available.`;
+    } else {
       seatWarning.textContent = "";
     }
+
+    updateSubmitState();
   });
 
+  // When location or time changes, re-check if form is submittable
+  locDropdown.addEventListener("change", updateSubmitState);
+  timeDropdown.addEventListener("change", updateSubmitState);
+
+  updateSubmitState(); // initial state
 });
 </script>
 
